@@ -30,10 +30,10 @@ jobs:
         sudo lshw -short -C memory | grep GiB
         echo -e "\n"
         echo "--------------------------硬盘信息--------------------------"
-        echo -e  "硬盘数量：$(ls /dev/sd* | grep -v [1-9] | wc -l) \n"
+        echo -e "硬盘数量：$(ls /dev/sd* | grep -v [1-9] | wc -l) \n"
         echo "硬盘详情："
         df -Th
-        
+
     - name: Before freeing up disk space
       run: |
         echo "Before freeing up disk space"
@@ -64,7 +64,7 @@ jobs:
 
     - name: Freeing up disk space
       uses: easimon/maximize-build-space@master
-      with: 
+      with:
         root-reserve-mb: 10240
         swap-size-mb: 1
         remove-dotnet: 'true'
@@ -79,14 +79,14 @@ jobs:
         echo "=============================================================================="
         df -hT
         echo "=============================================================================="
-        
+
     - name: Checkout
       uses: actions/checkout@main
-      
+
     - name: Initialize environment
       env:
         DEBIAN_FRONTEND: noninteractive
-      run: | 
+      run: |
         sudo -E apt-get -qq update -y
         sudo -E apt-get -qq install -y $(curl -fsSL https://raw.githubusercontent.com/nantayo/My-Pkg/master/2305)
         sudo -E apt-get -qq autoremove --purge
@@ -105,7 +105,7 @@ jobs:
         ccache: 'true'
         mixkey: AX6-IPQ-${{ env.REPO_BRANCH }}
         prefix: ${{ github.workspace }}/openwrt
-        
+
     - name: Update & Install feeds
       working-directory: ./openwrt
       run: |
@@ -119,10 +119,6 @@ jobs:
         chmod +x $DIY_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_SH
-
-    # - name: SSH connect to Actions
-      # uses: P3TERX/ssh2actions@main
-      # if: (github.event.inputs.ssh == 'true') || contains(github.event.action, 'ssh')
 
     - name: Download package
       working-directory: ./openwrt
@@ -140,42 +136,37 @@ jobs:
         make -j$(nproc) || make -j1 || make -j1 V=s
         echo "compile_status=success" >> $GITHUB_ENV
 
-    # - name : Upload packages
-      # uses: actions/upload-artifact@master
-      # if: always()
-      # with:
-        # name: AX6-IPQ
-        # path: openwrt/bin/targets
     - name: cp output to upload file
       run: |
         df -hT
         mkdir upload
         cp openwrt/bin/targets/*/*/*.ubi upload/
         cp openwrt/bin/targets/*/*/*.bin upload/
-        
+
     - name: Get Current Date
       run: echo "CURRENT_DATE=$(date '+%Y%m%d%H%M%S')" >> $GITHUB_ENV
-      
+
     - name: Upload OpenWrt Firmware to Release
       uses: ncipollo/release-action@main
       with:
         tag: AX6_IPQ_${{ env.CURRENT_DATE }}
-        artifacts: upload/*
+        artifacts: "upload/*"
         allowUpdates: true
         token: ${{ secrets.GITHUB_TOKEN }}
         body: |
           基于LiBwrt的openwrt代码构建
           首次使用建议全新刷写
-          是否有NSS加速自己测试！
           * 基本信息
           IP: 192.168.1.1
           账户: root
-          密码: password
-          
+          密码: 无 (留空)
+          2.4G WiFi: redmi-ax6-2.4g (密码: 123456789)
+          5G WiFi: redmiax6-5g (密码: 123456789)
+
     - name: Delete old releases
       uses: dev-drprasad/delete-older-releases@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         keep_latest: 10
-        delete_tags : true
+        delete_tags: true
