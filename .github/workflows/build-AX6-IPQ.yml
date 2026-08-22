@@ -72,19 +72,16 @@ jobs:
       run: |
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
-        # 显式补写并刷新索引
-        cat >> .config << 'EOF'
-CONFIG_PACKAGE_luci-app-nikki=y
-CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
-CONFIG_PACKAGE_nikki=y
-CONFIG_PACKAGE_mihomo=y
-CONFIG_PACKAGE_luci-app-daed=y
-CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y
-CONFIG_PACKAGE_daed=y
-CONFIG_PACKAGE_dae=y
-CONFIG_PACKAGE_golang=y
-CONFIG_PACKAGE_golang-src=y
-EOF
+        echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y" >> .config
+        echo "CONFIG_PACKAGE_nikki=y" >> .config
+        echo "CONFIG_PACKAGE_mihomo=y" >> .config
+        echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
+        echo "CONFIG_PACKAGE_daed=y" >> .config
+        echo "CONFIG_PACKAGE_dae=y" >> .config
+        echo "CONFIG_PACKAGE_golang=y" >> .config
+        echo "CONFIG_PACKAGE_golang-src=y" >> .config
         make defconfig
 
     - name: Download package
