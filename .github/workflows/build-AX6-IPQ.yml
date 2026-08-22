@@ -133,40 +133,10 @@ jobs:
         cd openwrt
         echo -e "$(nproc) thread compile"
         make -j$(nproc) || make -j1 || make -j1 V=s
-        echo "compile_status=success" >> $GITHUB_ENV
 
-    - name: cp output to upload file
-      run: |
-        df -hT
-        mkdir upload
-        cp openwrt/bin/targets/*/*/*.ubi upload/
-        cp openwrt/bin/targets/*/*/*.bin upload/
-
-    - name: Get Current Date
-      run: echo "CURRENT_DATE=$(date '+%Y%m%d%H%M%S')" >> $GITHUB_ENV
-
-    - name: Upload OpenWrt Firmware to Release
-      uses: ncipollo/release-action@main
+    - name: Upload all outputs to Actions Artifacts
+      uses: actions/upload-artifact@v4
       with:
-        name: OpenWrt for Redmi AX6
-        tag: AX6_IPQ_${{ env.CURRENT_DATE }}
-        artifacts: "upload/*"
-        allowUpdates: true
-        token: ${{ secrets.GITHUB_TOKEN }}
-        body: |
-          基于LiBwrt的openwrt代码构建
-          首次使用建议全新刷写
-          * 基本信息
-          IP: 192.168.1.1
-          账户: root
-          密码: 无 (留空)
-          2.4G WiFi: redmi-ax6-2.4g (密码: 123456789)
-          5G WiFi: redmiax6-5g (密码: 123456789)
-
-    - name: Delete old releases
-      uses: dev-drprasad/delete-older-releases@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        keep_latest: 10
-        delete_tags: true
+        name: AX6-OpenWRT-Stock-AllFiles
+        path: openwrt/bin/targets/qualcommax/ipq807x/
+        retention-days: 90
