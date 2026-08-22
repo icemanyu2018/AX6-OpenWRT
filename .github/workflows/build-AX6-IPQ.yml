@@ -51,6 +51,11 @@ jobs:
         mixkey: AX6-IPQ-build
         prefix: ${{ github.workspace }}/openwrt
 
+    - name: Update feeds
+      working-directory: ./openwrt
+      run: |
+        ./scripts/feeds update -a
+
     - name: Load custom feeds & Run DIY script
       run: |
         [ -e $FILES ] && cp -r $FILES openwrt/files
@@ -58,27 +63,15 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_SH
 
-    - name: Update & Install feeds
+    - name: Install feeds
       working-directory: ./openwrt
       run: |
-        ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    - name: Load custom config & force append plugins
+    - name: Load custom config & defconfig
       run: |
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
-        # 强制将关键包再次补写到底部
-        cat >> .config << 'EOF'
-        CONFIG_PACKAGE_luci-app-nikki=y
-        CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
-        CONFIG_PACKAGE_nikki=y
-        CONFIG_PACKAGE_mihomo=y
-        CONFIG_PACKAGE_luci-app-daed=y
-        CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y
-        CONFIG_PACKAGE_daed=y
-        CONFIG_PACKAGE_dae=y
-        EOF
         make defconfig
 
     - name: Download package
