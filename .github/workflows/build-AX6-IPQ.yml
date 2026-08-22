@@ -68,10 +68,23 @@ jobs:
       run: |
         ./scripts/feeds install -a
 
-    - name: Load custom config & defconfig
+    - name: Load custom config & force append
       run: |
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
+        # 显式补写并刷新索引
+        cat >> .config << 'EOF'
+CONFIG_PACKAGE_luci-app-nikki=y
+CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
+CONFIG_PACKAGE_nikki=y
+CONFIG_PACKAGE_mihomo=y
+CONFIG_PACKAGE_luci-app-daed=y
+CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y
+CONFIG_PACKAGE_daed=y
+CONFIG_PACKAGE_dae=y
+CONFIG_PACKAGE_golang=y
+CONFIG_PACKAGE_golang-src=y
+EOF
         make defconfig
 
     - name: Download package
