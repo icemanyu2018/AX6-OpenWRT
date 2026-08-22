@@ -1,18 +1,17 @@
 #!/bin/bash
 
-# 1. 拉取独立插件源码
+# 1. 拉取独立插件源码 (Argon 主题、daed、Nikki)
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
 git clone --depth 1 https://github.com/sbwml/luci-app-daed package/daed
-git clone --depth 1 -b master https://github.com/vernesong/OpenClash package/luci-app-openclash
-git clone --depth 1 https://github.com/rufengsuixing/luci-app-adguardhome package/luci-app-adguardhome
+git clone --depth 1 https://github.com/nikkinikki-org/luci-app-nikki package/luci-app-nikki
 
 # 2. 清理官方 feed 中可能冲突的旧插件
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
-rm -rf feeds/luci/applications/luci-app-openclash
+rm -rf feeds/luci/applications/luci-app-nikki
 
-# 3. 修复并禁用 Rust 编译 (移除 feeds 中的 rust 规则以防被隐式调用)
+# 3. 彻底禁用 Rust 编译以防 404
 rm -rf feeds/packages/lang/rust
 
 # 4. 设置后台管理 IP 为 192.168.1.1 与主机名
@@ -27,13 +26,11 @@ mkdir -p package/base-files/files/etc/uci-defaults
 cat > package/base-files/files/etc/uci-defaults/99-custom-wifi << 'EOF'
 #!/bin/sh
 
-# 开启物理无线
 uci -q batch << 'UCIBATCH'
 set wireless.@wifi-device[0].disabled='0'
 set wireless.@wifi-device[1].disabled='0'
 UCIBATCH
 
-# 遍历所有无线接口精准配置 SSID 与密码
 for iface in $(uci show wireless | grep '=wifi-iface' | cut -d'.' -f2 | cut -d'=' -f1); do
     device=$(uci -q get wireless.${iface}.device)
     band=$(uci -q get wireless.${device}.band)
