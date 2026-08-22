@@ -1,6 +1,7 @@
+
 #!/bin/bash
 
-# 1. 彻底清理可能冲突的旧包与同名目录
+# 1. 清理冲突目录
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-nikki
@@ -16,20 +17,37 @@ rm -rf package/luci-theme-argon package/luci-app-argon-config package/small pack
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
 
-# 3. 直接拉取 kenzok8/small 聚合包（自包含 daed, dae, nikki, mihomo 及所有 geo 依赖）
+# 3. 拉取 kenzok8/small
 git clone --depth 1 https://github.com/kenzok8/small package/small
 
-# 4. 彻底禁用 Rust 编译以防 404
+# 4. 彻底重写/抹除 dae 和 daed Makefile 中的 vmlinux-btf 强依赖
+if [ -d package/small/dae ]; then
+    sed -i 's/+vmlinux-btf//g' package/small/dae/Makefile
+    sed -i 's/@KERNEL_DEBUG_INFO_BTF//g' package/small/dae/Makefile
+    sed -i 's/vmlinux-btf//g' package/small/dae/Makefile
+fi
+
+if [ -d package/small/daed ]; then
+    sed -i 's/+vmlinux-btf//g' package/small/daed/Makefile
+    sed -i 's/@KERNEL_DEBUG_INFO_BTF//g' package/small/daed/Makefile
+    sed -i 's/vmlinux-btf//g' package/small/daed/Makefile
+fi
+
+if [ -d package/small/luci-app-daed ]; then
+    sed -i 's/+vmlinux-btf//g' package/small/luci-app-daed/Makefile
+fi
+
+# 5. 禁用 Rust 编译
 rm -rf feeds/packages/lang/rust
 
-# 5. 设置后台管理 IP 为 192.168.1.1 与主机名
+# 6. 设置后台 IP 为 192.168.1.1 与主机名
 [ -f package/base-files/files/bin/config_generate ] && sed -i 's/192.168.[0-9]*.1/192.168.1.1/g' package/base-files/files/bin/config_generate
 [ -f package/base-files/files/bin/config_generate ] && sed -i "s/hostname='.*'/hostname='Redmi-AX6'/g" package/base-files/files/bin/config_generate
 
-# 6. 设置默认 root 密码为空
+# 7. 设置默认 root 密码为空
 [ -f package/base-files/files/etc/shadow ] && sed -i 's/root:::0:99999:7:::/root::0:99999:7:::/g' package/base-files/files/etc/shadow
 
-# 7. 设置默认 WiFi (2.4G: redmi-ax6-2.4g, 5G: redmiax6-5g, 密码: 123456789)
+# 8. 设置默认 WiFi (2.4G: redmi-ax6-2.4g, 5G: redmiax6-5g, 密码: 123456789)
 mkdir -p package/base-files/files/etc/uci-defaults
 cat > package/base-files/files/etc/uci-defaults/99-custom-wifi << 'EOF'
 #!/sh
