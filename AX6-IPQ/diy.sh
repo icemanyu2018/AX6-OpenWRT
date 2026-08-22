@@ -1,15 +1,23 @@
 #!/bin/bash
 
-# 1. 拉取独立插件源码 (Argon 主题、daed、Nikki)
+# 1. 拉取独立插件与主题源码
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
-git clone --depth 1 https://github.com/sbwml/luci-app-daed package/daed
+
+# 拉取完整包含 mihomo 核心的 nikki 源码
 git clone --depth 1 https://github.com/nikkinikki-org/luci-app-nikki package/luci-app-nikki
 
-# 2. 清理官方 feed 中可能冲突的旧插件
+# 拉取完整 daed 及 dae 源码
+git clone --depth 1 https://github.com/sbwml/luci-app-daed package/daed
+
+# 2. 清理可能冲突的旧插件
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-nikki
+rm -rf feeds/packages/net/nikki
+rm -rf feeds/packages/net/mihomo
+rm -rf feeds/packages/net/daed
+rm -rf feeds/packages/net/dae
 
 # 3. 彻底禁用 Rust 编译以防 404
 rm -rf feeds/packages/lang/rust
