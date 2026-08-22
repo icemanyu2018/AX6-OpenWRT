@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 1. 直接拉取独立插件源码（避免稀疏克隆跳转错误）
+# 1. 拉取独立插件源码
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
 git clone --depth 1 https://github.com/sbwml/luci-app-daed package/daed
@@ -12,14 +12,18 @@ rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-openclash
 
-# 3. 设置后台管理 IP 为 192.168.1.1 与主机名
+# 3. 修复 Rust 编译时 404 错误 (禁用 download-ci-llvm)
+find feeds/packages/lang/rust/ -name "Makefile" -exec sed -i 's/download-ci-llvm = true/download-ci-llvm = false/g' {} + 2>/dev/null || true
+find feeds/packages/lang/rust/ -name "*.toml" -exec sed -i 's/download-ci-llvm = true/download-ci-llvm = false/g' {} + 2>/dev/null || true
+
+# 4. 设置后台管理 IP 为 192.168.1.1 与主机名
 [ -f package/base-files/files/bin/config_generate ] && sed -i 's/192.168.[0-9]*.1/192.168.1.1/g' package/base-files/files/bin/config_generate
 [ -f package/base-files/files/bin/config_generate ] && sed -i "s/hostname='.*'/hostname='Redmi-AX6'/g" package/base-files/files/bin/config_generate
 
-# 4. 设置默认 root 密码为空
+# 5. 设置默认 root 密码为空
 [ -f package/base-files/files/etc/shadow ] && sed -i 's/root:::0:99999:7:::/root::0:99999:7:::/g' package/base-files/files/etc/shadow
 
-# 5. 设置默认 WiFi (2.4G: redmi-ax6-2.4g, 5G: redmiax6-5g, 密码: 123456789)
+# 6. 设置默认 WiFi (2.4G: redmi-ax6-2.4g, 5G: redmiax6-5g, 密码: 123456789)
 mkdir -p package/base-files/files/etc/uci-defaults
 cat > package/base-files/files/etc/uci-defaults/99-custom-wifi << 'EOF'
 #!/bin/sh
