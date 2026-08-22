@@ -5,7 +5,6 @@ on:
 
 env:
   REPO_URL: https://github.com/LiBwrt-op/openwrt-6.x.git
-  REPO_BRANCH: master
   CONFIG_FILE: AX6-IPQ/.config-ipq
   DIY_SH: AX6-IPQ/diy.sh
   FILES: AX6-IPQ/files
@@ -97,13 +96,13 @@ jobs:
     - name: Clone source code
       working-directory: ./
       run: |
-        git clone $REPO_URL -b $REPO_BRANCH openwrt
+        git clone --depth 1 $REPO_URL openwrt
 
     - name: cache wrt build
       uses: stupidloud/cachewrtbuild@main
       with:
         ccache: 'true'
-        mixkey: AX6-IPQ-${{ env.REPO_BRANCH }}
+        mixkey: AX6-IPQ-build
         prefix: ${{ github.workspace }}/openwrt
 
     - name: Update & Install feeds
@@ -149,6 +148,7 @@ jobs:
     - name: Upload OpenWrt Firmware to Release
       uses: ncipollo/release-action@main
       with:
+        name: OpenWrt for Redmi AX6
         tag: AX6_IPQ_${{ env.CURRENT_DATE }}
         artifacts: "upload/*"
         allowUpdates: true
