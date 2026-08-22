@@ -68,7 +68,7 @@ jobs:
       run: |
         ./scripts/feeds install -a
 
-    - name: Load custom config & force append
+    - name: Load custom config & defconfig
       run: |
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
@@ -80,8 +80,6 @@ jobs:
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
         echo "CONFIG_PACKAGE_dae=y" >> .config
-        echo "CONFIG_PACKAGE_golang=y" >> .config
-        echo "CONFIG_PACKAGE_golang-src=y" >> .config
         make defconfig
 
     - name: Download package
