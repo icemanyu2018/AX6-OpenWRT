@@ -12,9 +12,8 @@ rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-openclash
 
-# 3. 修复 Rust 编译时 404 错误 (禁用 download-ci-llvm)
-find feeds/packages/lang/rust/ -name "Makefile" -exec sed -i 's/download-ci-llvm = true/download-ci-llvm = false/g' {} + 2>/dev/null || true
-find feeds/packages/lang/rust/ -name "*.toml" -exec sed -i 's/download-ci-llvm = true/download-ci-llvm = false/g' {} + 2>/dev/null || true
+# 3. 修复并禁用 Rust 编译 (移除 feeds 中的 rust 规则以防被隐式调用)
+rm -rf feeds/packages/lang/rust
 
 # 4. 设置后台管理 IP 为 192.168.1.1 与主机名
 [ -f package/base-files/files/bin/config_generate ] && sed -i 's/192.168.[0-9]*.1/192.168.1.1/g' package/base-files/files/bin/config_generate
