@@ -1,20 +1,19 @@
 #!/bin/bash
 
-# 1. 彻底清理可能冲突的同名包与旧目录
-rm -rf package/luci-theme-argon package/luci-app-argon-config package/daed package/luci-app-nikki package/nikki
-rm -rf feeds/luci/themes/luci-theme-argon
+# 1. 禁用官方冲突的包
 rm -rf feeds/luci/applications/luci-app-argon-config
+rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-nikki
+rm -rf feeds/packages/net/nikki
+rm -rf feeds/packages/net/mihomo
 rm -rf feeds/luci/applications/luci-app-daed
+rm -rf feeds/packages/net/daed
+rm -rf feeds/packages/net/dae
 
-# 2. 正确拉取独立插件源码到 package 目录
+# 2. 克隆需要的独立插件到 package 目录
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
-
-# 拉取完整包含 dae/daed 核心的源码
-git clone --depth 1 https://github.com/sbwml/luci-app-daed package/daed
-
-# 拉取完整包含 mihomo 核心的 nikki 源码
+git clone --depth 1 https://github.com/sbwml/luci-app-daed package/luci-app-daed
 git clone --depth 1 https://github.com/nikkinikki-org/luci-app-nikki package/luci-app-nikki
 
 # 3. 彻底禁用 Rust 编译以防 404
