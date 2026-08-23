@@ -35,7 +35,13 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         sudo -E apt-get -qq update -y
-        sudo -E apt-get -qq install -y $(curl -fsSL https://raw.githubusercontent.com/nantayo/My-Pkg/master/2305)
+        sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
+        bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib \
+        git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev \
+        libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz \
+        mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply \
+        python3-docutils qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl \
+        unzip vim wget xmlto xxd zlib1g-dev libfuse-dev
         sudo timedatectl set-timezone "$TZ"
         sudo chown -R $USER:$GROUPS $GITHUB_WORKSPACE
 
@@ -62,10 +68,8 @@ jobs:
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
-        # 抹除 feeds 内关于 vmlinux-btf 的拦截
-        grep -rl "vmlinux-btf" feeds/ 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
-        grep -rl "DAE_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAE_USE_VMLINUX_BTF://g' 2>/dev/null || true
-        grep -rl "DAED_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAED_USE_VMLINUX_BTF://g' 2>/dev/null || true
+        find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
+        find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
         ./scripts/feeds install -f -a
 
     - name: Load custom config & defconfig
@@ -73,33 +77,25 @@ jobs:
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
         
-        # 1. 开启 eBPF 内核底层驱动（daed/dae 强依赖）
+        # 强制开启 BPF 与核心网络套件
         echo "CONFIG_BPF=y" >> .config
         echo "CONFIG_BPF_SYSCALL=y" >> .config
-        echo "CONFIG_NET_CLS_ACT=y" >> .config
-        echo "CONFIG_NET_CLS_BPF=y" >> .config
-        echo "CONFIG_NET_ACT_BPF=y" >> .config
         echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
         echo "CONFIG_PACKAGE_kmod-sched-bpf=y" >> .config
         echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
         echo "CONFIG_PACKAGE_kmod-inet-diag=y" >> .config
         echo "CONFIG_PACKAGE_libbpf=y" >> .config
 
-        # 2. Nikki & Mihomo
+        # Nikki 与 Mihomo
         echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
         
-        # 3. daed / dae 系列（包含 daed-next, dae-wing 与 luci 界面）
+        # daed 全套插件及核心
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
-        echo "CONFIG_PACKAGE_luci-app-daed-next=y" >> .config
-        echo "CONFIG_PACKAGE_luci-i18n-daed-next-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
-        echo "CONFIG_PACKAGE_luci-app-dae=y" >> .config
-        echo "CONFIG_PACKAGE_luci-i18n-dae-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
-        echo "CONFIG_PACKAGE_daed-next=y" >> .config
         echo "CONFIG_PACKAGE_dae=y" >> .config
         echo "CONFIG_PACKAGE_dae-wing=y" >> .config
         
