@@ -78,20 +78,13 @@ jobs:
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
         
-        # 1. 开启内核 eBPF 与 BTF 基础依赖
-        echo "CONFIG_DEVEL=y" >> .config
-        echo "CONFIG_KERNEL_DEBUG_INFO=y" >> .config
-        echo "CONFIG_KERNEL_DEBUG_INFO_REDUCED=n" >> .config
-        echo "CONFIG_KERNEL_DEBUG_INFO_BTF=y" >> .config
-        echo "CONFIG_KERNEL_CGROUPS=y" >> .config
-        echo "CONFIG_KERNEL_CGROUP_BPF=y" >> .config
+        # 1. 仅保留基础网络 BPF 模块 (彻底移除导致 bpf-headers 报错的底层 BTF 编译项)
         echo "CONFIG_BPF=y" >> .config
         echo "CONFIG_BPF_SYSCALL=y" >> .config
         echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
         echo "CONFIG_PACKAGE_kmod-sched-bpf=y" >> .config
         echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
         echo "CONFIG_PACKAGE_kmod-inet-diag=y" >> .config
-        echo "CONFIG_PACKAGE_libbpf=y" >> .config
 
         # 2. Nikki 与 Mihomo 核心
         echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
@@ -99,7 +92,7 @@ jobs:
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
 
-        # 3. daed 及其核心
+        # 3. QiuSimons 预编译版 daed
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
