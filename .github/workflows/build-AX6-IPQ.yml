@@ -51,11 +51,6 @@ jobs:
         mixkey: AX6-IPQ-build
         prefix: ${{ github.workspace }}/openwrt
 
-    - name: Update feeds
-      working-directory: ./openwrt
-      run: |
-        ./scripts/feeds update -a
-
     - name: Run DIY script
       run: |
         [ -e $FILES ] && cp -r $FILES openwrt/files
@@ -63,9 +58,14 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_SH
 
-    - name: Install feeds
+    - name: Update and Install feeds
       working-directory: ./openwrt
       run: |
+        ./scripts/feeds update -a
+        # 抹除整个 feeds 内关于 vmlinux-btf 的依赖拦截
+        grep -rl "vmlinux-btf" feeds/ 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
+        grep -rl "DAE_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAE_USE_VMLINUX_BTF://g' 2>/dev/null || true
+        grep -rl "DAED_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAED_USE_VMLINUX_BTF://g' 2>/dev/null || true
         ./scripts/feeds install -f -a
 
     - name: Load custom config & defconfig
