@@ -12,7 +12,8 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    # 🚨 关键修改 1：升级到 24.04 以获取支持 Linux 6.6 eBPF 的新版 pahole 工具
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
@@ -35,13 +36,14 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         sudo -E apt-get -qq update -y
+        # 🚨 关键修改 2：加入 clang llvm lld libcap-dev libbfd-dev 等 eBPF 宿主机编译必备工具
         sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
         bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib \
         git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev \
         libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz \
         mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply \
         python3-docutils qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl \
-        unzip vim wget xmlto xxd zlib1g-dev libfuse-dev dwarves
+        unzip vim wget xmlto xxd zlib1g-dev libfuse-dev dwarves clang llvm lld libcap-dev libbfd-dev binutils-dev
         sudo timedatectl set-timezone "$TZ"
         sudo chown -R $USER:$GROUPS $GITHUB_WORKSPACE
 
@@ -69,22 +71,12 @@ jobs:
       run: |
         ./scripts/feeds update -a
         
-        # 🚨 1. 物理清场：删除 feeds 目录下自带的所有 dae/daed，全网只留我们自己克隆的预编译版
+        # 🚨 保持物理清场：删除 feeds 目录下的原生 daed 冲突包，只留 QiuSimons 预编译版
         rm -rf feeds/packages/net/dae feeds/packages/net/daed
         rm -rf feeds/luci/applications/luci-app-dae feeds/luci/applications/luci-app-daed
         rm -rf feeds/small/dae feeds/small/daed feeds/small/luci-app-daed feeds/small/luci-app-daede
         
-        # 🚨 2. 解除 package/luci-app-daed 下的死板依赖与 BTF/bpf-headers 绑定
-        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+kmod-bpf //g; s/\+kmod-sched-bpf //g; s/\+kmod-inet-diag //g; s/\+kmod-tun //g' || true
-        
-        # 彻底干掉 bpf-headers 和 BTF 相关字眼，防止触发内核级 eBPF 源码编译崩溃
-        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+[A-Za-z0-9_]*VMLINUX_BTF:bpf-headers//g' || true
-        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+bpf-headers//g' || true
-        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/@[A-Za-z0-9_]*VMLINUX_BTF://g' || true
-        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+DAED_USE_VMLINUX_BTF://g' || true
-        
-        # 3. 清除 feeds 架构限制
-        find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
+        # 抹除针对内核 6.6 的死板拦截
         find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
         
         ./scripts/feeds install -f -a
@@ -93,14 +85,29 @@ jobs:
       run: |
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
+        
+        # 🚨 关键修改 3：堂堂正正恢复 BTF 与内核编译开关！
+        echo "CONFIG_DEVEL=y" >> .config
+        echo "CONFIG_KERNEL_DEBUG_INFO=y" >> .config
+        echo "CONFIG_KERNEL_DEBUG_INFO_REDUCED=n" >> .config
+        echo "CONFIG_KERNEL_DEBUG_INFO_BTF=y" >> .config
+        echo "CONFIG_KERNEL_CGROUPS=y" >> .config
+        echo "CONFIG_KERNEL_CGROUP_BPF=y" >> .config
+        echo "CONFIG_BPF=y" >> .config
+        echo "CONFIG_BPF_SYSCALL=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-sched-bpf=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-inet-diag=y" >> .config
+        echo "CONFIG_PACKAGE_libbpf=y" >> .config
 
-        # Nikki 与 Mihomo
+        # Nikki 与 Mihomo 核心
         echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
 
-        # daed 与核心 (无依赖阻拦版)
+        # daed 与核心 
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
