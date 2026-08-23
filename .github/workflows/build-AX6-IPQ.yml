@@ -97,7 +97,24 @@ jobs:
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
         
+        echo "========== 🛠️ 诊断开始：检查 daed 依赖链 =========="
+        echo "1. 扫描所有 dae/daed 源码包，提取底层硬性依赖："
+        find feeds/ package/ -type f -name "Makefile" | grep -E "daed/Makefile|dae/Makefile|luci-app-daed" | while read -r file; do
+            echo -e "\n--- 解析文件：$file ---"
+            grep -E "^DEPENDS" "$file" || echo "无 DEPENDS 声明"
+            grep -E "ONLY_FOR_ARCHS" "$file" || echo "无架构锁"
+        done
+        echo -e "\n================================================="
+
         make defconfig
+        
+        echo "========== 🔍 诊断结果：defconfig 裁决报告 =========="
+        echo "1. 检查 daed 的存活情况："
+        grep -i "daed" .config || echo "⚠️ 警告：daed 全家桶已被系统静默剔除！"
+        
+        echo -e "\n2. 检查 eBPF 内核底座存活情况 (这是 daed 活着的前提)："
+        grep -E "CONFIG_BPF|kmod-bpf" .config || echo "⚠️ 警告：kmod-bpf 底层模块被剔除了！"
+        echo "==================================================="
 
     - name: Download package
       working-directory: ./openwrt
