@@ -74,8 +74,14 @@ jobs:
         rm -rf feeds/luci/applications/luci-app-dae feeds/luci/applications/luci-app-daed
         rm -rf feeds/small/dae feeds/small/daed feeds/small/luci-app-daed feeds/small/luci-app-daede
         
-        # 🚨 2. 解除 daed 的死板依赖：防止被 defconfig 因为找不到独立 kmod 模块而连坐剔除
+        # 🚨 2. 解除 package/luci-app-daed 下的死板依赖与 BTF/bpf-headers 绑定
         find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+kmod-bpf //g; s/\+kmod-sched-bpf //g; s/\+kmod-inet-diag //g; s/\+kmod-tun //g' || true
+        
+        # 彻底干掉 bpf-headers 和 BTF 相关字眼，防止触发内核级 eBPF 源码编译崩溃
+        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+[A-Za-z0-9_]*VMLINUX_BTF:bpf-headers//g' || true
+        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+bpf-headers//g' || true
+        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/@[A-Za-z0-9_]*VMLINUX_BTF://g' || true
+        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+DAED_USE_VMLINUX_BTF://g' || true
         
         # 3. 清除 feeds 架构限制
         find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
