@@ -1,27 +1,32 @@
 #!/bin/bash
 
-# 1. 彻底清除冲突目录
-rm -rf package/luci-theme-argon package/luci-app-argon-config package/small package/openwrt-packages package/daed package/dae package/luci-app-nikki package/luci-app-daed
+# 1. 彻底清除可能冲突的目录与 feeds 残留
+rm -rf package/luci-theme-argon package/luci-app-argon-config package/small package/openwrt-packages package/daed package/dae package/luci-app-nikki package/luci-app-daed package/luci-app-daed-next package/daed-next package/dae-wing
 
-# 2. 引入扩展 feeds
+# 2. 引入基础 feeds
 sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages.git' feeds.conf.default
 sed -i '$a src-git small https://github.com/kenzok8/small.git' feeds.conf.default
 
-# 3. 拉取 argon 主题
+# 3. 单独克隆官方预编译兼容版 daed 和 argon 主题
+git clone --depth 1 https://github.com/sbwml/luci-app-daed package/luci-app-daed
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
 
-# 4. 禁用 Rust
+# 4. 暴力移除 package 目录下所有针对内核 BTF 及版本的阻断
+find package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
+find package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
+
+# 5. 禁用 Rust 编译
 rm -rf feeds/packages/lang/rust
 
-# 5. 设置后台管理 IP 为 192.168.1.1 与主机名
+# 6. 设置后台管理 IP 为 192.168.1.1 与主机名
 [ -f package/base-files/files/bin/config_generate ] && sed -i 's/192.168.[0-9]*.1/192.168.1.1/g' package/base-files/files/bin/config_generate
 [ -f package/base-files/files/bin/config_generate ] && sed -i "s/hostname='.*'/hostname='Redmi-AX6'/g" package/base-files/files/bin/config_generate
 
-# 6. 设置默认 root 密码为空
+# 7. 设置默认 root 密码为空
 [ -f package/base-files/files/etc/shadow ] && sed -i 's/root:::0:99999:7:::/root::0:99999:7:::/g' package/base-files/files/etc/shadow
 
-# 7. 设置默认 WiFi
+# 8. 设置默认 WiFi
 mkdir -p package/base-files/files/etc/uci-defaults
 cat > package/base-files/files/etc/uci-defaults/99-custom-wifi << 'EOF'
 #!/sh
