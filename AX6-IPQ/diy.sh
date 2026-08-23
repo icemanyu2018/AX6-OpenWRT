@@ -1,15 +1,8 @@
 #!/bin/bash
 
-# 1. 彻底清理可能冲突的旧包与同名目录
-rm -rf feeds/luci/themes/luci-theme-argon
-rm -rf feeds/luci/applications/luci-app-argon-config
-rm -rf feeds/luci/applications/luci-app-nikki
-rm -rf feeds/packages/net/nikki
-rm -rf feeds/packages/net/mihomo
-rm -rf feeds/luci/applications/luci-app-dae
-rm -rf feeds/luci/applications/luci-app-daed
-rm -rf feeds/packages/net/dae
-rm -rf feeds/packages/net/daed
+# 1. 彻底清理系统 feeds 里的旧版残缺 dae / daed
+find feeds/ -type d -name "luci-app-dae*" -exec rm -rf {} + 2>/dev/null || true
+find feeds/ -type d -name "dae*" -exec rm -rf {} + 2>/dev/null || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config package/small package/daed package/dae package/luci-app-nikki
 
 # 2. 拉取 argon 主题
@@ -19,15 +12,12 @@ git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/l
 # 3. 拉取 kenzok8/small
 git clone --depth 1 https://github.com/kenzok8/small package/small
 
-# 4. 精准抹除 dae/daed 中残留的条件声明与 vmlinux-btf 字符串
-find package/small/ -type f -name "Makefile" -exec sed -i 's/+@DAE_USE_VMLINUX_BTF:vmlinux-btf//g' {} +
-find package/small/ -type f -name "Makefile" -exec sed -i 's/+@DAED_USE_VMLINUX_BTF:vmlinux-btf//g' {} +
-find package/small/ -type f -name "Makefile" -exec sed -i 's/+@KERNEL_DEBUG_INFO_BTF:vmlinux-btf//g' {} +
-find package/small/ -type f -name "Makefile" -exec sed -i 's/+vmlinux-btf//g' {} +
-find package/small/ -type f -name "Makefile" -exec sed -i 's/@DAE_USE_VMLINUX_BTF://g' {} +
-find package/small/ -type f -name "Makefile" -exec sed -i 's/@DAED_USE_VMLINUX_BTF://g' {} +
+# 4. 全局暴力抹除：扫描整个源码目录（package + feeds），彻底消除全部 vmlinux-btf 声明
+grep -rl "vmlinux-btf" feeds/ package/ 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
+grep -rl "DAE_USE_VMLINUX_BTF" feeds/ package/ 2>/dev/null | xargs sed -i 's/@DAE_USE_VMLINUX_BTF://g' 2>/dev/null || true
+grep -rl "DAED_USE_VMLINUX_BTF" feeds/ package/ 2>/dev/null | xargs sed -i 's/@DAED_USE_VMLINUX_BTF://g' 2>/dev/null || true
 
-# 5. 彻底禁用 Rust 编译以防 404
+# 5. 彻底禁用 Rust 编译
 rm -rf feeds/packages/lang/rust
 
 # 6. 设置后台管理 IP 为 192.168.1.1 与主机名
