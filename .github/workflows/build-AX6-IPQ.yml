@@ -41,7 +41,7 @@ jobs:
         libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz \
         mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply \
         python3-docutils qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl \
-        unzip vim wget xmlto xxd zlib1g-dev libfuse-dev
+        unzip vim wget xmlto xxd zlib1g-dev libfuse-dev dwarves
         sudo timedatectl set-timezone "$TZ"
         sudo chown -R $USER:$GROUPS $GITHUB_WORKSPACE
 
@@ -78,7 +78,13 @@ jobs:
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
         
-        # 1. 开启内核 eBPF 基础依赖
+        # 1. 开启内核 eBPF 与 BTF 基础依赖
+        echo "CONFIG_DEVEL=y" >> .config
+        echo "CONFIG_KERNEL_DEBUG_INFO=y" >> .config
+        echo "CONFIG_KERNEL_DEBUG_INFO_REDUCED=n" >> .config
+        echo "CONFIG_KERNEL_DEBUG_INFO_BTF=y" >> .config
+        echo "CONFIG_KERNEL_CGROUPS=y" >> .config
+        echo "CONFIG_KERNEL_CGROUP_BPF=y" >> .config
         echo "CONFIG_BPF=y" >> .config
         echo "CONFIG_BPF_SYSCALL=y" >> .config
         echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
@@ -93,7 +99,7 @@ jobs:
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
 
-        # 3. sbwml daed 及其核心
+        # 3. daed 及其核心
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
