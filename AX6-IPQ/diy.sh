@@ -1,45 +1,27 @@
 #!/bin/bash
 
-# 1. 彻底清理可能残留的同名与冲突目录
-rm -rf feeds/luci/themes/luci-theme-argon
-rm -rf feeds/luci/applications/luci-app-argon-config
-rm -rf feeds/luci/applications/luci-app-nikki
-rm -rf feeds/packages/net/nikki
-rm -rf feeds/packages/net/mihomo
-rm -rf feeds/luci/applications/luci-app-dae
-rm -rf feeds/luci/applications/luci-app-daed
-rm -rf feeds/packages/net/dae
-rm -rf feeds/packages/net/daed
-rm -rf package/luci-theme-argon package/luci-app-argon-config package/luci-app-nikki package/luci-app-daed package/dae package/daed package/small
+# 1. 彻底清理可能冲突的旧包与同名目录
+rm -rf package/luci-theme-argon package/luci-app-argon-config package/small package/openwrt-packages package/daed package/dae package/luci-app-nikki
 
-# 2. 拉取 argon 主题
+# 2. 将包含 nikki/daed 及完整依赖链的源写入 feeds.conf.default
+sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages.git' feeds.conf.default
+sed -i '$a src-git small https://github.com/kenzok8/small.git' feeds.conf.default
+
+# 3. 拉取 argon 主题
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
 
-# 3. 直接克隆 nikki 与 daed 的完整应用源码到 package/ 目录
-git clone --depth 1 https://github.com/nikkinikki-org/luci-app-nikki package/luci-app-nikki
-git clone --depth 1 https://github.com/daeuniverse/luci-app-daed package/luci-app-daed
-git clone --depth 1 https://github.com/daeuniverse/dae package/dae
-
-# 4. 全局精准抹除 dae/daed 的 vmlinux-btf 强依赖声明
-find package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/+@DAE_USE_VMLINUX_BTF:vmlinux-btf//g' 2>/dev/null || true
-find package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/+@DAED_USE_VMLINUX_BTF:vmlinux-btf//g' 2>/dev/null || true
-find package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/+@KERNEL_DEBUG_INFO_BTF:vmlinux-btf//g' 2>/dev/null || true
-find package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/+vmlinux-btf//g' 2>/dev/null || true
-find package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@DAE_USE_VMLINUX_BTF://g' 2>/dev/null || true
-find package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@DAED_USE_VMLINUX_BTF://g' 2>/dev/null || true
-
-# 5. 彻底禁用 Rust 编译以防 404
+# 4. 彻底禁用 Rust 编译以防 404
 rm -rf feeds/packages/lang/rust
 
-# 6. 设置后台管理 IP 为 192.168.1.1 与主机名
+# 5. 设置后台管理 IP 为 192.168.1.1 与主机名
 [ -f package/base-files/files/bin/config_generate ] && sed -i 's/192.168.[0-9]*.1/192.168.1.1/g' package/base-files/files/bin/config_generate
 [ -f package/base-files/files/bin/config_generate ] && sed -i "s/hostname='.*'/hostname='Redmi-AX6'/g" package/base-files/files/bin/config_generate
 
-# 7. 设置默认 root 密码为空
+# 6. 设置默认 root 密码为空
 [ -f package/base-files/files/etc/shadow ] && sed -i 's/root:::0:99999:7:::/root::0:99999:7:::/g' package/base-files/files/etc/shadow
 
-# 8. 设置默认 WiFi (2.4G: redmi-ax6-2.4g, 5G: redmiax6-5g, 密码: 123456789)
+# 7. 设置默认 WiFi (2.4G: redmi-ax6-2.4g, 5G: redmiax6-5g, 密码: 123456789)
 mkdir -p package/base-files/files/etc/uci-defaults
 cat > package/base-files/files/etc/uci-defaults/99-custom-wifi << 'EOF'
 #!/sh
