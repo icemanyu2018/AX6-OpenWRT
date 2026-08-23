@@ -68,53 +68,39 @@ jobs:
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
-        # 清除 feeds 目录下所有干扰限制
+        
+        # 🚨 1. 物理清场：删除 feeds 目录下自带的所有 dae/daed，全网只留我们自己克隆的预编译版
+        rm -rf feeds/packages/net/dae feeds/packages/net/daed
+        rm -rf feeds/luci/applications/luci-app-dae feeds/luci/applications/luci-app-daed
+        rm -rf feeds/small/dae feeds/small/daed feeds/small/luci-app-daed feeds/small/luci-app-daede
+        
+        # 🚨 2. 解除 daed 的死板依赖：防止被 defconfig 因为找不到独立 kmod 模块而连坐剔除
+        find package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+kmod-bpf //g; s/\+kmod-sched-bpf //g; s/\+kmod-inet-diag //g; s/\+kmod-tun //g' || true
+        
+        # 3. 清除 feeds 架构限制
         find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
         find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
+        
         ./scripts/feeds install -f -a
 
     - name: Load custom config & defconfig
       run: |
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
-        
-        # 1. 仅保留基础网络 BPF 模块 (彻底移除导致 bpf-headers 报错的底层 BTF 编译项)
-        echo "CONFIG_BPF=y" >> .config
-        echo "CONFIG_BPF_SYSCALL=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-sched-bpf=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-inet-diag=y" >> .config
 
-        # 2. Nikki 与 Mihomo 核心
+        # Nikki 与 Mihomo
         echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
 
-        # 3. QiuSimons 预编译版 daed
+        # daed 与核心 (无依赖阻拦版)
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
+        echo "CONFIG_PACKAGE_dae=y" >> .config
         
-        echo "========== 🛠️ 诊断开始：检查 daed 依赖链 =========="
-        echo "1. 扫描所有 dae/daed 源码包，提取底层硬性依赖："
-        find feeds/ package/ -type f -name "Makefile" | grep -E "daed/Makefile|dae/Makefile|luci-app-daed" | while read -r file; do
-            echo -e "\n--- 解析文件：$file ---"
-            grep -E "^DEPENDS" "$file" || echo "无 DEPENDS 声明"
-            grep -E "ONLY_FOR_ARCHS" "$file" || echo "无架构锁"
-        done
-        echo -e "\n================================================="
-
         make defconfig
-        
-        echo "========== 🔍 诊断结果：defconfig 裁决报告 =========="
-        echo "1. 检查 daed 的存活情况："
-        grep -i "daed" .config || echo "⚠️ 警告：daed 全家桶已被系统静默剔除！"
-        
-        echo -e "\n2. 检查 eBPF 内核底座存活情况 (这是 daed 活着的前提)："
-        grep -E "CONFIG_BPF|kmod-bpf" .config || echo "⚠️ 警告：kmod-bpf 底层模块被剔除了！"
-        echo "==================================================="
 
     - name: Download package
       working-directory: ./openwrt
