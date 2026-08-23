@@ -62,7 +62,7 @@ jobs:
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
-        # 抹除 feeds 内关于 vmlinux-btf 的依赖拦截
+        # 抹除 feeds 内关于 vmlinux-btf 的拦截
         grep -rl "vmlinux-btf" feeds/ 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
         grep -rl "DAE_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAE_USE_VMLINUX_BTF://g' 2>/dev/null || true
         grep -rl "DAED_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAED_USE_VMLINUX_BTF://g' 2>/dev/null || true
@@ -72,17 +72,34 @@ jobs:
       run: |
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
-        # Nikki & Mihomo 核心
+        
+        # 1. 开启 eBPF 内核底层驱动（daed/dae 强依赖）
+        echo "CONFIG_BPF=y" >> .config
+        echo "CONFIG_BPF_SYSCALL=y" >> .config
+        echo "CONFIG_NET_CLS_ACT=y" >> .config
+        echo "CONFIG_NET_CLS_BPF=y" >> .config
+        echo "CONFIG_NET_ACT_BPF=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-sched-bpf=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-inet-diag=y" >> .config
+        echo "CONFIG_PACKAGE_libbpf=y" >> .config
+
+        # 2. Nikki & Mihomo
         echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
         
-        # daed 全系列新旧包名与依赖
+        # 3. daed / dae 系列（包含 daed-next, dae-wing 与 luci 界面）
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-app-daed-next=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-next-zh-cn=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
+        echo "CONFIG_PACKAGE_luci-app-dae=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-dae-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
+        echo "CONFIG_PACKAGE_daed-next=y" >> .config
         echo "CONFIG_PACKAGE_dae=y" >> .config
         echo "CONFIG_PACKAGE_dae-wing=y" >> .config
         
