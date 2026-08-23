@@ -68,8 +68,11 @@ jobs:
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
-        find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
-        find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
+        # 强制解除整个 feeds 中关于 dae/daed 的架构与内核依赖限制
+        grep -rl "vmlinux-btf" feeds/ 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
+        grep -rl "LINUX_6_6" feeds/ 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
+        grep -rl "DAE_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAE_USE_VMLINUX_BTF://g' 2>/dev/null || true
+        grep -rl "DAED_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAED_USE_VMLINUX_BTF://g' 2>/dev/null || true
         ./scripts/feeds install -f -a
 
     - name: Load custom config & defconfig
@@ -77,9 +80,7 @@ jobs:
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
         
-        # 强制开启 BPF 与核心网络套件
-        echo "CONFIG_BPF=y" >> .config
-        echo "CONFIG_BPF_SYSCALL=y" >> .config
+        # 开启 eBPF 基础内核模块
         echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
         echo "CONFIG_PACKAGE_kmod-sched-bpf=y" >> .config
         echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
@@ -91,14 +92,15 @@ jobs:
         echo "CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
-        
-        # daed 全套插件及核心
+
+        # dae / daed
+        echo "CONFIG_PACKAGE_luci-app-dae=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-dae-zh-cn=y" >> .config
+        echo "CONFIG_PACKAGE_dae=y" >> .config
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
-        echo "CONFIG_PACKAGE_dae=y" >> .config
-        echo "CONFIG_PACKAGE_dae-wing=y" >> .config
-        
+
         make defconfig
 
     - name: Download package
