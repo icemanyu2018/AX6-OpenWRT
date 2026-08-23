@@ -1,19 +1,15 @@
 #!/bin/bash
 
-# 1. 彻底清理可能冲突的同名目录
-rm -rf feeds/luci/themes/luci-theme-argon
-rm -rf feeds/luci/applications/luci-app-argon-config
-rm -rf package/luci-theme-argon package/luci-app-argon-config package/small package/daed package/dae package/luci-app-nikki
+# 1. 彻底清理可能冲突的同名残留
+rm -rf package/luci-theme-argon package/luci-app-argon-config package/luci-app-nikki package/small package/daed package/dae
 
-# 2. 拉取 argon 主题
+# 2. 将包含 nikki/daed 完整依赖的 feed 源加入 feeds.conf.default
+sed -i '$a src-git nikki https://github.com/nikkinikki-org/luci-app-nikki.git' feeds.conf.default
+sed -i '$a src-git daed https://github.com/daeuniverse/luci-app-daed.git' feeds.conf.default
+
+# 3. 拉取 argon 主题
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
-
-# 3. 精准清除官方 feeds 中 dae / daed 的 vmlinux-btf 强依赖（避免破坏 Makefile 依赖行）
-find feeds/packages/net/ -name "Makefile" 2>/dev/null | xargs sed -i 's/+vmlinux-btf//g' 2>/dev/null || true
-find feeds/packages/net/ -name "Makefile" 2>/dev/null | xargs sed -i 's/+@.*:vmlinux-btf//g' 2>/dev/null || true
-find feeds/luci/applications/ -name "Makefile" 2>/dev/null | xargs sed -i 's/+vmlinux-btf//g' 2>/dev/null || true
-find feeds/luci/applications/ -name "Makefile" 2>/dev/null | xargs sed -i 's/+@.*:vmlinux-btf//g' 2>/dev/null || true
 
 # 4. 彻底禁用 Rust 编译以防 404
 rm -rf feeds/packages/lang/rust
