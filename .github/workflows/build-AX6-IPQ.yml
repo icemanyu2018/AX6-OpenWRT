@@ -12,8 +12,7 @@ env:
 
 jobs:
   build:
-    # 🚨 关键修改 1：升级到 24.04 以获取支持 Linux 6.6 eBPF 的新版 pahole 工具
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout
@@ -36,14 +35,13 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         sudo -E apt-get -qq update -y
-        # 🚨 关键修改 2：加入 clang llvm lld libcap-dev libbfd-dev 等 eBPF 宿主机编译必备工具
         sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
         bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib \
         git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev \
         libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz \
         mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply \
         python3-docutils qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl \
-        unzip vim wget xmlto xxd zlib1g-dev libfuse-dev dwarves clang llvm lld libcap-dev libbfd-dev binutils-dev
+        unzip vim wget xmlto xxd zlib1g-dev libfuse-dev dwarves
         sudo timedatectl set-timezone "$TZ"
         sudo chown -R $USER:$GROUPS $GITHUB_WORKSPACE
 
@@ -71,12 +69,22 @@ jobs:
       run: |
         ./scripts/feeds update -a
         
-        # 🚨 保持物理清场：删除 feeds 目录下的原生 daed 冲突包，只留 QiuSimons 预编译版
+        # 🚨 1. 物理清场：干掉源里所有冲突的原生 dae/daed
         rm -rf feeds/packages/net/dae feeds/packages/net/daed
         rm -rf feeds/luci/applications/luci-app-dae feeds/luci/applications/luci-app-daed
         rm -rf feeds/small/dae feeds/small/daed feeds/small/luci-app-daed feeds/small/luci-app-daede
         
-        # 抹除针对内核 6.6 的死板拦截
+        # 🚨 2. 加强版正则绝杀：精准捕获并抹除任何形式的 bpf-headers 和 VMLINUX_BTF 触发器
+        find package/luci-app-daed/ -name "Makefile" | xargs sed -i -E 's/\+[^[:space:]]*bpf-headers[^[:space:]]*//g'
+        find package/luci-app-daed/ -name "Makefile" | xargs sed -i -E 's/\+[^[:space:]]*VMLINUX_BTF[^[:space:]]*//g'
+        find package/luci-app-daed/ -name "Makefile" | xargs sed -i -E 's/\+kmod-bpf //g'
+        find package/luci-app-daed/ -name "Makefile" | xargs sed -i -E 's/\+kmod-sched-bpf //g'
+        
+        # 🚨 3. 物理粉碎 bpf-headers 源码包：只要它不存在，就没人能让它崩溃！
+        rm -rf package/kernel/bpf-headers
+        
+        # 4. 清除 feeds 架构限制
+        find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
         find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
         
         ./scripts/feeds install -f -a
@@ -86,20 +94,13 @@ jobs:
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
         
-        # 🚨 关键修改 3：堂堂正正恢复 BTF 与内核编译开关！
-        echo "CONFIG_DEVEL=y" >> .config
-        echo "CONFIG_KERNEL_DEBUG_INFO=y" >> .config
-        echo "CONFIG_KERNEL_DEBUG_INFO_REDUCED=n" >> .config
-        echo "CONFIG_KERNEL_DEBUG_INFO_BTF=y" >> .config
-        echo "CONFIG_KERNEL_CGROUPS=y" >> .config
-        echo "CONFIG_KERNEL_CGROUP_BPF=y" >> .config
+        # 开启 eBPF 基础支持 (不触发头文件编译)
         echo "CONFIG_BPF=y" >> .config
         echo "CONFIG_BPF_SYSCALL=y" >> .config
         echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
         echo "CONFIG_PACKAGE_kmod-sched-bpf=y" >> .config
         echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
         echo "CONFIG_PACKAGE_kmod-inet-diag=y" >> .config
-        echo "CONFIG_PACKAGE_libbpf=y" >> .config
 
         # Nikki 与 Mihomo 核心
         echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
@@ -107,7 +108,7 @@ jobs:
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
 
-        # daed 与核心 
+        # daed 与核心 (无依赖阻拦版)
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
