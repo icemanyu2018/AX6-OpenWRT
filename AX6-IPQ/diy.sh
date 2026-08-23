@@ -19,8 +19,13 @@ git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/l
 # 3. 拉取 kenzok8/small
 git clone --depth 1 https://github.com/kenzok8/small package/small
 
-# 4. 暴力清洗所有的 vmlinux-btf 依赖声明（匹配各种空格、加号、括号组合）
-grep -rl "vmlinux-btf" package/small/ | xargs sed -i 's/[+@]*vmlinux-btf//g' 2>/dev/null || true
+# 4. 精准抹除 dae/daed 中残留的条件声明与 vmlinux-btf 字符串
+find package/small/ -type f -name "Makefile" -exec sed -i 's/+@DAE_USE_VMLINUX_BTF:vmlinux-btf//g' {} +
+find package/small/ -type f -name "Makefile" -exec sed -i 's/+@DAED_USE_VMLINUX_BTF:vmlinux-btf//g' {} +
+find package/small/ -type f -name "Makefile" -exec sed -i 's/+@KERNEL_DEBUG_INFO_BTF:vmlinux-btf//g' {} +
+find package/small/ -type f -name "Makefile" -exec sed -i 's/+vmlinux-btf//g' {} +
+find package/small/ -type f -name "Makefile" -exec sed -i 's/@DAE_USE_VMLINUX_BTF://g' {} +
+find package/small/ -type f -name "Makefile" -exec sed -i 's/@DAED_USE_VMLINUX_BTF://g' {} +
 
 # 5. 彻底禁用 Rust 编译以防 404
 rm -rf feeds/packages/lang/rust
