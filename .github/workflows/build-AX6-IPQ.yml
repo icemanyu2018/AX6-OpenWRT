@@ -51,10 +51,11 @@ jobs:
         mixkey: AX6-IPQ-build
         prefix: ${{ github.workspace }}/openwrt
 
-    - name: Update feeds
+    - name: Initial feeds setup
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
+        ./scripts/feeds install -a
 
     - name: Run DIY script
       run: |
@@ -63,7 +64,7 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_SH
 
-    - name: Install feeds
+    - name: Link and Refresh feeds
       working-directory: ./openwrt
       run: |
         ./scripts/feeds install -a
