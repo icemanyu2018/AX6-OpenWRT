@@ -1,7 +1,6 @@
-
 #!/bin/bash
 
-# 1. 清理冲突目录
+# 1. 彻底清理可能冲突的旧包与同名目录
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-nikki
@@ -20,27 +19,14 @@ git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/l
 # 3. 拉取 kenzok8/small
 git clone --depth 1 https://github.com/kenzok8/small package/small
 
-# 4. 彻底重写/抹除 dae 和 daed Makefile 中的 vmlinux-btf 强依赖
-if [ -d package/small/dae ]; then
-    sed -i 's/+vmlinux-btf//g' package/small/dae/Makefile
-    sed -i 's/@KERNEL_DEBUG_INFO_BTF//g' package/small/dae/Makefile
-    sed -i 's/vmlinux-btf//g' package/small/dae/Makefile
-fi
+# 4. 修复 dae/daed 依赖：精准删除 vmlinux-btf 声明而不破坏前缀条件
+find package/small/ -type f -name "Makefile" -exec sed -i 's/+@KERNEL_DEBUG_INFO_BTF:vmlinux-btf//g' {} +
+find package/small/ -type f -name "Makefile" -exec sed -i 's/+vmlinux-btf//g' {} +
 
-if [ -d package/small/daed ]; then
-    sed -i 's/+vmlinux-btf//g' package/small/daed/Makefile
-    sed -i 's/@KERNEL_DEBUG_INFO_BTF//g' package/small/daed/Makefile
-    sed -i 's/vmlinux-btf//g' package/small/daed/Makefile
-fi
-
-if [ -d package/small/luci-app-daed ]; then
-    sed -i 's/+vmlinux-btf//g' package/small/luci-app-daed/Makefile
-fi
-
-# 5. 禁用 Rust 编译
+# 5. 彻底禁用 Rust 编译以防 404
 rm -rf feeds/packages/lang/rust
 
-# 6. 设置后台 IP 为 192.168.1.1 与主机名
+# 6. 设置后台管理 IP 为 192.168.1.1 与主机名
 [ -f package/base-files/files/bin/config_generate ] && sed -i 's/192.168.[0-9]*.1/192.168.1.1/g' package/base-files/files/bin/config_generate
 [ -f package/base-files/files/bin/config_generate ] && sed -i "s/hostname='.*'/hostname='Redmi-AX6'/g" package/base-files/files/bin/config_generate
 
