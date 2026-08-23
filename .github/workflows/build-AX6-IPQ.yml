@@ -62,7 +62,7 @@ jobs:
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
-        # 抹除整个 feeds 内关于 vmlinux-btf 的依赖拦截
+        # 抹除 feeds 内关于 vmlinux-btf 的依赖拦截
         grep -rl "vmlinux-btf" feeds/ 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
         grep -rl "DAE_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAE_USE_VMLINUX_BTF://g' 2>/dev/null || true
         grep -rl "DAED_USE_VMLINUX_BTF" feeds/ 2>/dev/null | xargs sed -i 's/@DAED_USE_VMLINUX_BTF://g' 2>/dev/null || true
@@ -72,14 +72,20 @@ jobs:
       run: |
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
+        # Nikki & Mihomo 核心
         echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
+        
+        # daed 全系列新旧包名与依赖
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
-        echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
+        echo "CONFIG_PACKAGE_luci-app-daed-next=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-daed-next-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
         echo "CONFIG_PACKAGE_dae=y" >> .config
+        echo "CONFIG_PACKAGE_dae-wing=y" >> .config
+        
         make defconfig
 
     - name: Download package
