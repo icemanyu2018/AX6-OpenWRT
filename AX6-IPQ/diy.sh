@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# 1. 彻底清理可能冲突的旧包与同名目录
+# 1. 清理可能冲突的旧包与同名目录
 rm -rf package/luci-theme-argon package/luci-app-argon-config package/small package/openwrt-packages package/daed package/dae package/luci-app-nikki
 
-# 2. 将包含 nikki/daed 及完整依赖链的源写入 feeds.conf.default
+# 2. 将包含 nikki、daed 及完整依赖链的源写入 feeds.conf.default
 sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages.git' feeds.conf.default
 sed -i '$a src-git small https://github.com/kenzok8/small.git' feeds.conf.default
 
