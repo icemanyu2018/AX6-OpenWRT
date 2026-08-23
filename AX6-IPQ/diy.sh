@@ -7,8 +7,8 @@ rm -rf package/luci-theme-argon package/luci-app-argon-config package/small pack
 sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages.git' feeds.conf.default
 sed -i '$a src-git small https://github.com/kenzok8/small.git' feeds.conf.default
 
-# 3. 单独克隆官方预编译兼容版 daed 和 argon 主题
-git clone --depth 1 https://github.com/sbwml/luci-app-daed package/luci-app-daed
+# 3. 单独克隆预编译兼容版 daed 和 argon 主题
+git clone --depth 1 https://github.com/QiuSimons/luci-app-daed package/luci-app-daed
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth 1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
 
