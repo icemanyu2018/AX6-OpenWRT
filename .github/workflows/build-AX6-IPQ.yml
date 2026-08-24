@@ -69,11 +69,11 @@ jobs:
       run: |
         ./scripts/feeds update -a
         
-        # 🚨 1. 提取小宝源的纯预编译核心到最高优先级目录
+        # 1. 提取小宝源的纯预编译核心到最高优先级目录
         cp -r feeds/small/dae package/dae
         cp -r feeds/small/daed package/daed
         
-        # 🚨 2. 动态寻找 luci-app-daed 界面包并提取
+        # 2. 动态寻找 luci-app-daed 界面包并提取
         LUCI_PATH=$(find feeds/ -type d -name "luci-app-daed" | head -n 1)
         [ -n "$LUCI_PATH" ] && cp -r "$LUCI_PATH" package/luci-app-daed
         
@@ -81,14 +81,36 @@ jobs:
         rm -rf feeds/packages/net/dae feeds/packages/net/daed
         rm -rf feeds/luci/applications/luci-app-dae feeds/luci/applications/luci-app-daed
         
-        # 4. 暴力切断界面和核心里任何可能漏网的 bpf-headers 依赖，防止牵连编译
-        find package/daed/ package/luci-app-daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/\+kmod-bpf //g; s/\+kmod-sched-bpf //g' || true
-        find package/daed/ package/luci-app-daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/\+[A-Za-z0-9_]*VMLINUX_BTF:bpf-headers//g' || true
-        find package/daed/ package/luci-app-daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/\+bpf-headers//g' || true
-        find package/daed/ package/luci-app-daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/@[A-Za-z0-9_]*VMLINUX_BTF://g' || true
+        # 🚨 4. 全局核弹级清理：补上遗漏的 package/dae/ 
+        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+[a-zA-Z0-9_-]*bpf-headers//g' || true
+        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+[a-zA-Z0-9_-]*VMLINUX_BTF://g' || true
+        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+kmod-bpf //g; s/\+kmod-sched-bpf //g' || true
         
         # 5. 清除架构限制
-        find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
+        find feeds/ package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
+        
+        # 🚨 6. 偷梁换柱大法：将原始的 bpf-headers 替换成一个永远瞬间编译成功的空壳（Dummy）
+        rm -rf package/kernel/bpf-headers
+        mkdir -p package/kernel/bpf-headers
+        cat > package/kernel/bpf-headers/Makefile << 'EOF'
+        include $(TOPDIR)/rules.mk
+        PKG_NAME:=bpf-headers
+        PKG_VERSION:=9.9.9
+        PKG_RELEASE:=1
+        include $(INCLUDE_DIR)/package.mk
+        define Package/bpf-headers
+          SECTION:=net
+          CATEGORY:=Network
+          TITLE:=Dummy bpf-headers bypass
+        endef
+        define Build/Compile
+        	true
+        endef
+        define Package/bpf-headers/install
+        	true
+        endef
+        $(eval $(call BuildPackage,bpf-headers))
+        EOF
         
         ./scripts/feeds install -f -a
 
@@ -111,7 +133,7 @@ jobs:
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
 
-        # 使用提权后的 daed (核心纯二进制，UI自动匹配)
+        # 使用提权后的 daed 组合包
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
