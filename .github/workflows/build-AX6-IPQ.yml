@@ -69,13 +69,25 @@ jobs:
       run: |
         ./scripts/feeds update -a
         
-        # 🚨 绝杀技：将小宝源的预编译版提权到核心 package 目录，利用最高优先级机制自动覆盖官方冲突版！
+        # 🚨 1. 提取小宝源的纯预编译核心到最高优先级目录
         cp -r feeds/small/dae package/dae
         cp -r feeds/small/daed package/daed
-        cp -r feeds/small/luci-app-daed package/luci-app-daed
         
-        # 清除可能残留的内核/架构依赖限制
-        find package/daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
+        # 🚨 2. 动态寻找 luci-app-daed 界面包并提取
+        LUCI_PATH=$(find feeds/ -type d -name "luci-app-daed" | head -n 1)
+        [ -n "$LUCI_PATH" ] && cp -r "$LUCI_PATH" package/luci-app-daed
+        
+        # 3. 物理删除 feeds 里的原始包，防止系统索引混乱
+        rm -rf feeds/packages/net/dae feeds/packages/net/daed
+        rm -rf feeds/luci/applications/luci-app-dae feeds/luci/applications/luci-app-daed
+        
+        # 4. 暴力切断界面和核心里任何可能漏网的 bpf-headers 依赖，防止牵连编译
+        find package/daed/ package/luci-app-daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/\+kmod-bpf //g; s/\+kmod-sched-bpf //g' || true
+        find package/daed/ package/luci-app-daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/\+[A-Za-z0-9_]*VMLINUX_BTF:bpf-headers//g' || true
+        find package/daed/ package/luci-app-daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/\+bpf-headers//g' || true
+        find package/daed/ package/luci-app-daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/@[A-Za-z0-9_]*VMLINUX_BTF://g' || true
+        
+        # 5. 清除架构限制
         find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
         
         ./scripts/feeds install -f -a
@@ -99,7 +111,7 @@ jobs:
         echo "CONFIG_PACKAGE_nikki=y" >> .config
         echo "CONFIG_PACKAGE_mihomo=y" >> .config
 
-        # 使用小宝源的纯预编译 daed，它不会再去碰 bpf-headers！
+        # 使用提权后的 daed (核心纯二进制，UI自动匹配)
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
