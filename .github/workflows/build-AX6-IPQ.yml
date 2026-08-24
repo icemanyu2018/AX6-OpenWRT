@@ -69,12 +69,13 @@ jobs:
       run: |
         ./scripts/feeds update -a
         
-        # 🚨 真正的解法：删掉官方的源码版 daed，逼迫系统使用 small 源里的预编译版！
-        rm -rf feeds/packages/net/dae feeds/packages/net/daed
-        rm -rf feeds/luci/applications/luci-app-dae feeds/luci/applications/luci-app-daed
+        # 🚨 绝杀技：将小宝源的预编译版提权到核心 package 目录，利用最高优先级机制自动覆盖官方冲突版！
+        cp -r feeds/small/dae package/dae
+        cp -r feeds/small/daed package/daed
+        cp -r feeds/small/luci-app-daed package/luci-app-daed
         
-        # 清除小宝源/kenzo源 可能残留的架构限制
-        find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
+        # 清除可能残留的内核/架构依赖限制
+        find package/daed/ -type f -name "Makefile" 2>/dev/null | xargs sed -i -E 's/[+@]*[A-Za-z0-9_]*vmlinux-btf//g' 2>/dev/null || true
         find feeds/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
         
         ./scripts/feeds install -f -a
