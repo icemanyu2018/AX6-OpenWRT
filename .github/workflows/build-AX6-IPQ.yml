@@ -81,15 +81,17 @@ jobs:
         rm -rf feeds/packages/net/dae feeds/packages/net/daed
         rm -rf feeds/luci/applications/luci-app-dae feeds/luci/applications/luci-app-daed
         
-        # 🚨 4. 全局核弹级清理：补上遗漏的 package/dae/ 
-        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+[a-zA-Z0-9_-]*bpf-headers//g' || true
-        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+[a-zA-Z0-9_-]*VMLINUX_BTF://g' || true
-        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" | xargs sed -i -E 's/\+kmod-bpf //g; s/\+kmod-sched-bpf //g' || true
+        # 🚨 4. 温和且精确地清理 daed 的内核底层要求，绝不破坏 Makefile 语法！
+        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+bpf-headers//g' || true
+        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+DAE_USE_VMLINUX_BTF:bpf-headers//g' || true
+        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+DAED_USE_VMLINUX_BTF:bpf-headers//g' || true
+        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+kmod-bpf//g' || true
+        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+kmod-sched-bpf//g' || true
         
         # 5. 清除架构限制
-        find feeds/ package/ -type f -name "Makefile" 2>/dev/null | xargs sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
+        find feeds/ package/ -type f -name "Makefile" -print0 2>/dev/null | xargs -0 sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
         
-        # 🚨 6. 偷梁换柱大法：将原始的 bpf-headers 替换成一个永远瞬间编译成功的空壳（Dummy）
+        # 6. 空壳 bpf-headers 替换 (阻击编译崩溃的黑魔法)
         rm -rf package/kernel/bpf-headers
         mkdir -p package/kernel/bpf-headers
         cat > package/kernel/bpf-headers/Makefile << 'EOF'
@@ -127,13 +129,32 @@ jobs:
         echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
         echo "CONFIG_PACKAGE_kmod-inet-diag=y" >> .config
 
-        # Nikki 与 Mihomo 核心
-        echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
-        echo "CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y" >> .config
-        echo "CONFIG_PACKAGE_nikki=y" >> .config
-        echo "CONFIG_PACKAGE_mihomo=y" >> .config
+        # 🚨 坚决剔除 Nikki 和 Mihomo
+        sed -i '/nikki/d' .config
+        sed -i '/mihomo/d' .config
+        echo "# CONFIG_PACKAGE_luci-app-nikki is not set" >> .config
+        echo "# CONFIG_PACKAGE_nikki is not set" >> .config
+        echo "# CONFIG_PACKAGE_mihomo is not set" >> .config
 
-        # 使用提权后的 daed 组合包
+        # ✅ 加入 HomeProxy
+        echo "CONFIG_PACKAGE_luci-app-homeproxy=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-homeproxy-zh-cn=y" >> .config
+
+        # ✅ 加入 微信推送 (serverchan / pushbot)
+        echo "CONFIG_PACKAGE_luci-app-serverchan=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-serverchan-zh-cn=y" >> .config
+        echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-pushbot-zh-cn=y" >> .config
+
+        # ✅ 加入 OpenClash (及其必备依赖)
+        echo "CONFIG_PACKAGE_luci-app-openclash=y" >> .config
+        echo "CONFIG_PACKAGE_coreutils-nohup=y" >> .config
+
+        # ✅ 确保 终端 (ttyd) 加入
+        echo "CONFIG_PACKAGE_luci-app-ttyd=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y" >> .config
+
+        # ✅ 使用提权后的 daed 组合包 (防静默删除版)
         echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_daed=y" >> .config
