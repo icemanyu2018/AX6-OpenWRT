@@ -68,52 +68,6 @@ jobs:
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
-        
-        # 1. 提取小宝源的纯预编译核心到最高优先级目录
-        cp -r feeds/small/dae package/dae
-        cp -r feeds/small/daed package/daed
-        
-        # 2. 动态寻找 luci-app-daed 界面包并提取
-        LUCI_PATH=$(find feeds/ -type d -name "luci-app-daed" | head -n 1)
-        [ -n "$LUCI_PATH" ] && cp -r "$LUCI_PATH" package/luci-app-daed
-        
-        # 3. 物理删除 feeds 里的原始包，防止系统索引混乱
-        rm -rf feeds/packages/net/dae feeds/packages/net/daed
-        rm -rf feeds/luci/applications/luci-app-dae feeds/luci/applications/luci-app-daed
-        
-        # 🚨 4. 温和且精确地清理 daed 的内核底层要求，绝不破坏 Makefile 语法！
-        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+bpf-headers//g' || true
-        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+DAE_USE_VMLINUX_BTF:bpf-headers//g' || true
-        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+DAED_USE_VMLINUX_BTF:bpf-headers//g' || true
-        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+kmod-bpf//g' || true
-        find package/dae/ package/daed/ package/luci-app-daed/ -type f -name "Makefile" -print0 | xargs -0 sed -i 's/+kmod-sched-bpf//g' || true
-        
-        # 5. 清除架构限制
-        find feeds/ package/ -type f -name "Makefile" -print0 2>/dev/null | xargs -0 sed -i 's/@!LINUX_6_6//g' 2>/dev/null || true
-        
-        # 6. 空壳 bpf-headers 替换 (阻击编译崩溃的黑魔法)
-        rm -rf package/kernel/bpf-headers
-        mkdir -p package/kernel/bpf-headers
-        cat > package/kernel/bpf-headers/Makefile << 'EOF'
-        include $(TOPDIR)/rules.mk
-        PKG_NAME:=bpf-headers
-        PKG_VERSION:=9.9.9
-        PKG_RELEASE:=1
-        include $(INCLUDE_DIR)/package.mk
-        define Package/bpf-headers
-          SECTION:=net
-          CATEGORY:=Network
-          TITLE:=Dummy bpf-headers bypass
-        endef
-        define Build/Compile
-        	true
-        endef
-        define Package/bpf-headers/install
-        	true
-        endef
-        $(eval $(call BuildPackage,bpf-headers))
-        EOF
-        
         ./scripts/feeds install -f -a
 
     - name: Load custom config & defconfig
@@ -121,7 +75,7 @@ jobs:
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
         
-        # 开启 eBPF 基础支持
+        # 保留 eBPF 基础支持 (为后期手动安装 daed 打底)
         echo "CONFIG_BPF=y" >> .config
         echo "CONFIG_BPF_SYSCALL=y" >> .config
         echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
@@ -129,36 +83,29 @@ jobs:
         echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
         echo "CONFIG_PACKAGE_kmod-inet-diag=y" >> .config
 
-        # 🚨 坚决剔除 Nikki 和 Mihomo
+        # 剔除 Nikki、Mihomo、daed、dae
         sed -i '/nikki/d' .config
         sed -i '/mihomo/d' .config
-        echo "# CONFIG_PACKAGE_luci-app-nikki is not set" >> .config
-        echo "# CONFIG_PACKAGE_nikki is not set" >> .config
-        echo "# CONFIG_PACKAGE_mihomo is not set" >> .config
+        sed -i '/daed/d' .config
+        sed -i '/dae/d' .config
 
-        # ✅ 加入 HomeProxy
+        # 加入 HomeProxy
         echo "CONFIG_PACKAGE_luci-app-homeproxy=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-homeproxy-zh-cn=y" >> .config
 
-        # ✅ 加入 微信推送 (serverchan / pushbot)
+        # 加入 微信推送 (serverchan / pushbot)
         echo "CONFIG_PACKAGE_luci-app-serverchan=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-serverchan-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-pushbot-zh-cn=y" >> .config
 
-        # ✅ 加入 OpenClash (及其必备依赖)
+        # 加入 OpenClash
         echo "CONFIG_PACKAGE_luci-app-openclash=y" >> .config
         echo "CONFIG_PACKAGE_coreutils-nohup=y" >> .config
 
-        # ✅ 确保 终端 (ttyd) 加入
+        # 加入 终端 (ttyd)
         echo "CONFIG_PACKAGE_luci-app-ttyd=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y" >> .config
-
-        # ✅ 使用提权后的 daed 组合包 (防静默删除版)
-        echo "CONFIG_PACKAGE_luci-app-daed=y" >> .config
-        echo "CONFIG_PACKAGE_luci-i18n-daed-zh-cn=y" >> .config
-        echo "CONFIG_PACKAGE_daed=y" >> .config
-        echo "CONFIG_PACKAGE_dae=y" >> .config
         
         make defconfig
 
