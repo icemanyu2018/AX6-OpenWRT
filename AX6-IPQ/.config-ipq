@@ -24,24 +24,28 @@ CONFIG_TARGET_PREINIT_NETMASK="255.255.255.0"
 CONFIG_TARGET_PREINIT_BROADCAST="192.168.1.255"
 
 # =========================================================
-# 2. 代理服务与微信推送 (HomeProxy + OpenClash + Pushbot)
+# 2. 代理服务与推送插件 (Nikki + OpenClash + 微信推送)
 # =========================================================
-# HomeProxy
-CONFIG_PACKAGE_luci-app-homeproxy=y
-CONFIG_PACKAGE_luci-i18n-homeproxy-zh-cn=y
+# Nikki 与 Mihomo 核心
+CONFIG_PACKAGE_luci-app-nikki=y
+CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
+CONFIG_PACKAGE_nikki=y
+CONFIG_PACKAGE_mihomo=y
 
 # OpenClash 与依赖
 CONFIG_PACKAGE_luci-app-openclash=y
 CONFIG_PACKAGE_coreutils-nohup=y
 
-# 微信推送 (ServerChan / PushBot)
-CONFIG_PACKAGE_luci-app-serverchan=y
-CONFIG_PACKAGE_luci-i18n-serverchan-zh-cn=y
+# 微信推送 (wechatpush / pushbot / serverchan)
+CONFIG_PACKAGE_luci-app-wechatpush=y
+CONFIG_PACKAGE_luci-i18n-wechatpush-zh-cn=y
 CONFIG_PACKAGE_luci-app-pushbot=y
 CONFIG_PACKAGE_luci-i18n-pushbot-zh-cn=y
+CONFIG_PACKAGE_luci-app-serverchan=y
+CONFIG_PACKAGE_luci-i18n-serverchan-zh-cn=y
 
 # =========================================================
-# 3. 核心底层网络、eBPF、TUN 虚拟网卡与证书支持 (保留 daed 底座)
+# 3. 核心底层网络、eBPF、TUN 虚拟网卡与证书支持
 # =========================================================
 CONFIG_PACKAGE_kmod-tun=y
 CONFIG_PACKAGE_kmod-inet-diag=y
