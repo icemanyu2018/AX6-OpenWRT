@@ -75,7 +75,7 @@ jobs:
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         cd openwrt
         
-        # 保留 eBPF 基础支持 (为后期手动安装 daed 打底)
+        # 基础运行与代理依赖
         echo "CONFIG_BPF=y" >> .config
         echo "CONFIG_BPF_SYSCALL=y" >> .config
         echo "CONFIG_PACKAGE_kmod-bpf=y" >> .config
@@ -83,27 +83,30 @@ jobs:
         echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
         echo "CONFIG_PACKAGE_kmod-inet-diag=y" >> .config
 
-        # 剔除 Nikki、Mihomo、daed、dae
-        sed -i '/nikki/d' .config
-        sed -i '/mihomo/d' .config
+        # 剔除 HomeProxy 与 daed/dae
+        sed -i '/homeproxy/d' .config
         sed -i '/daed/d' .config
         sed -i '/dae/d' .config
 
-        # 加入 HomeProxy
-        echo "CONFIG_PACKAGE_luci-app-homeproxy=y" >> .config
-        echo "CONFIG_PACKAGE_luci-i18n-homeproxy-zh-cn=y" >> .config
+        # 编译 Nikki 与 Mihomo 核心
+        echo "CONFIG_PACKAGE_luci-app-nikki=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y" >> .config
+        echo "CONFIG_PACKAGE_nikki=y" >> .config
+        echo "CONFIG_PACKAGE_mihomo=y" >> .config
 
-        # 加入 微信推送 (serverchan / pushbot)
-        echo "CONFIG_PACKAGE_luci-app-serverchan=y" >> .config
-        echo "CONFIG_PACKAGE_luci-i18n-serverchan-zh-cn=y" >> .config
+        # 编译 微信推送 (覆盖常用命名以确保命中)
+        echo "CONFIG_PACKAGE_luci-app-wechatpush=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-wechatpush-zh-cn=y" >> .config
         echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-pushbot-zh-cn=y" >> .config
+        echo "CONFIG_PACKAGE_luci-app-serverchan=y" >> .config
+        echo "CONFIG_PACKAGE_luci-i18n-serverchan-zh-cn=y" >> .config
 
-        # 加入 OpenClash
+        # 编译 OpenClash
         echo "CONFIG_PACKAGE_luci-app-openclash=y" >> .config
         echo "CONFIG_PACKAGE_coreutils-nohup=y" >> .config
 
-        # 加入 终端 (ttyd)
+        # 编译 终端 (ttyd)
         echo "CONFIG_PACKAGE_luci-app-ttyd=y" >> .config
         echo "CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y" >> .config
         
